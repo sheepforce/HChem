@@ -23,4 +23,4 @@ cabal_clean:
 	rm -rf dist
 
 hchem_clean:
-	cd src && rm -f *.o *.hi
+	cd src && rm -f *.o *.hi hchem
