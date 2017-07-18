@@ -12,9 +12,11 @@ import qualified Data.Chemistry.XYZ as XYZ
 main :: IO()
 main = do
     program <- getArgs
-    case (head program) of
-         "align" -> align
-         _ -> hchem_help
+    if (program == [])
+       then hchem_help
+       else case (head program) of
+                 "align" -> align
+                 _ -> hchem_help
          
 
 align :: IO()
@@ -39,7 +41,11 @@ align = do
 
 hchem_help :: IO()
 hchem_help = do
-    putStrLn "HChem Version 0.1"
+    putStrLn "HChem version 0.1"
+    putStrLn "  hchem [command] [options]"
+    putStrLn ""
+    putStrLn "  command can be"
+    putStrLn "      align -- aligning a molecule in a specific orientation"
     
 
 align_help :: IO()
