@@ -3,14 +3,15 @@ import System.Environment
 import Text.Read
 import Data.Maybe
 import Data.Either.Unwrap
---import Control.Exception
 import Data.Attoparsec.Text
---import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import qualified Data.Chemistry.XYZ as XYZ
 
+-- find out what user wants to do and print info text if no or non valid choice
+-- calling all other subroutines
 main :: IO()
 main = do
+    -- read command line for task to execute
     program <- getArgs
     if (program == [])
        then hchem_help
@@ -20,12 +21,14 @@ main = do
                  "interpolate" -> interpolate
                  _ -> hchem_help
          
-
+-- align a input structure at given atoms
 align :: IO()
 align = do
+    -- get filename and the nuber of the atoms to align from the command line
     opts <- getArgs
     let xyzFile = opts !! 1
         maybeAtoms = map (readMaybe :: String -> Maybe Int) . (drop 2) $ opts
+    -- if input is OK proceed, else print help message
     if (elem Nothing maybeAtoms || length maybeAtoms /= 3)
        then do
            align_help
@@ -33,6 +36,7 @@ align = do
            let atoms = map fromJust maybeAtoms
            xyzFile_content <- TIO.readFile xyzFile
            let molecule_try = parseOnly XYZ.xyzParser xyzFile_content
+           -- if content of the file is no valid XYZ content, print error
            if (isLeft molecule_try)
               then putStrLn "  not a valid XYZ file"
               else do
@@ -41,6 +45,7 @@ align = do
                   XYZ.printXYZ stdout molecule_aligned
 
 
+-- same as align but for multiple frames in a XYZ trajectory
 align_many :: IO()
 align_many = do
     opts <- getArgs
@@ -61,12 +66,16 @@ align_many = do
                   mapM_ (XYZ.printXYZ stdout) traj_aligned
 
 
+-- interpolate geometries in cartesian coordinates
+-- geometries from two XYZ files and number of images from command lin
 interpolate :: IO()
 interpolate = do
+    -- read two file names and number of images from command line
     opts <- getArgs
     let xyz1File = opts !! 1
         xyz2File = opts !! 2
         maybeNImages = (readMaybe :: String -> Maybe Int) $ opts !! 3
+    -- check if input is OK, if not print help, if yes continue
     if (length opts /= 4 || isNothing maybeNImages)
        then do
            interpolate_help
@@ -76,6 +85,7 @@ interpolate = do
            xyz2_content <- TIO.readFile xyz2File
            let xyz1_try = parseOnly XYZ.xyzParser xyz1_content
                xyz2_try = parseOnly XYZ.xyzParser xyz2_content
+           -- are both XYZ files readable? If yes continue
            if (isLeft xyz1_try || isLeft xyz2_try)
               then putStrLn "  no valid XYZ files"
               else do
@@ -84,14 +94,16 @@ interpolate = do
                       xyzInterImages = XYZ.interpolate nImages xyz1 xyz2
                   mapM_ (XYZ.printXYZ stdout) xyzInterImages
 
+                  
 hchem_help :: IO()
 hchem_help = do
     putStrLn "HChem version 0.1"
     putStrLn "  hchem [command] [options]"
     putStrLn ""
     putStrLn "  command can be"
-    putStrLn "      align -- aligning a molecule in a specific orientation"
-    putStrLn "      align-many -- align a trajectory, each frame in specific orientation"
+    putStrLn "      align        -- aligning a molecule in a specific orientation"
+    putStrLn "      align-many   -- align a trajectory, each frame in specific orientation"
+    putStrLn "      interpolate  -- interpolate two structures in cartesian coordinates"
     
 
 align_help :: IO()
