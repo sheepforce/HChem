@@ -6,6 +6,7 @@ import Data.Either.Unwrap
 import Data.Attoparsec.Text
 import qualified Data.Text.IO as TIO
 import qualified Data.Chemistry.XYZ as XYZ
+import qualified Data.Chemistry.BasisSet as BasisSet
 
 -- find out what user wants to do and print info text if no or non valid choice
 -- calling all other subroutines
@@ -19,6 +20,7 @@ main = do
                  "align" -> align
                  "align-many" -> align_many
                  "interpolate" -> interpolate
+                 "basconv" -> basconv
                  _ -> hchem_help
          
 -- align a input structure at given atoms
@@ -94,7 +96,33 @@ interpolate = do
                       xyzInterImages = XYZ.interpolate nImages xyz1 xyz2
                   mapM_ (XYZ.printXYZ stdout) xyzInterImages
 
-                  
+
+basconv :: IO()
+basconv = do
+    opts <- getArgs
+    let basfile = opts !! 1
+        informat_raw = opts !! 2
+        outformat_raw = opts !! 3
+    if (length opts /= 4)
+       then do
+           basconv_help
+       else do
+           basInContent <- TIO.readFile basfile
+           case informat_raw of
+                "nwchem" -> do
+                    case outformat_raw of
+                         "bagel" -> do
+                             let basparse_try = parseOnly BasisSet.nwBasisParser basInContent
+                             if (isRight basparse_try)
+                                then do
+                                    let nwbasis = fromRight basparse_try
+                                    BasisSet.printBagelBasisList stdout nwbasis
+                                else do
+                                    putStrLn "  not a valid NWChem basis set file"
+                         _ -> basconv_help
+                _ -> basconv_help
+
+
 hchem_help :: IO()
 hchem_help = do
     putStrLn "HChem version 0.1"
@@ -104,6 +132,7 @@ hchem_help = do
     putStrLn "      align        -- aligning a molecule in a specific orientation"
     putStrLn "      align-many   -- align a trajectory, each frame in specific orientation"
     putStrLn "      interpolate  -- interpolate two structures in cartesian coordinates"
+    putStrLn "      basconv      -- convert a basis set to a different format"
     
 
 align_help :: IO()
@@ -119,3 +148,11 @@ align_many_help = do
 interpolate_help :: IO()
 interpolate_help = do
     putStrLn "  Usage: hchem interpolate $filename1 $filename2 $nImages"
+
+basconv_help :: IO()
+basconv_help = do
+    putStrLn "  Usage hchem basconv $filename $inputformat $outputformat"
+    putStrLn "  $inputformat can be"
+    putStrLn "    nwchem"
+    putStrLn "  $outformat can be"
+    putStrLn "    bagel"
