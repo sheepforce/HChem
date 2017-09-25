@@ -120,6 +120,16 @@ basconv = do
                                 else do
                                     putStrLn "  not a valid NWChem basis set file"
                          _ -> basconv_help
+                "gamess" -> do
+                    case outformat_raw of
+                         "bagel" -> do
+                             let basparse_try = parseOnly BasisSet.gmsBasisParser basInContent
+                             if (isRight basparse_try)
+                                then do
+                                    let gmsbasis = fromRight basparse_try
+                                    BasisSet.printBagelBasisList stdout gmsbasis
+                                else do
+                                    putStrLn "  not a valid GAMESS-US basis set file"
                 _ -> basconv_help
 
 
@@ -154,5 +164,6 @@ basconv_help = do
     putStrLn "  Usage hchem basconv $filename $inputformat $outputformat"
     putStrLn "  $inputformat can be"
     putStrLn "    nwchem"
+    putStrLn "    gamess"
     putStrLn "  $outformat can be"
     putStrLn "    bagel"
