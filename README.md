@@ -31,6 +31,7 @@ HChem can currently only handle XYZ files. Following operations are supported
  - align structure in a specific orientation
  - align trajectory
  - interpolate structures in cartesian coordinates
+ - convert basis set formats
 
 Calling is easy
 
