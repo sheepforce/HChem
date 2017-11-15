@@ -32,10 +32,16 @@ HChem can currently only handle XYZ files. Following operations are supported
  - align trajectory
  - interpolate structures in cartesian coordinates
  - convert basis set formats
+ - recontract a basis set from a atomic calculation
 
 Calling is easy
 
     hchem [command] [option]
-If you enter help or non existing commands it prints info text. You get more specific help if you just enter the command. For example to align a structure in `Molecule.xyz` so that atom 2 has x, y, z = 0, atom 4 has x, y = 0 and atom 5 has z = 0 enter
+If you enter help or non existing commands it prints info text. You get more specific help if you just enter the command. For example 
+ - to align a structure in `Molecule.xyz` so that atom 2 has x, y, z = 0, atom 4 has x, y = 0 and atom 5 has z = 0 enter
 
     hchem align Molecule.xyz 2 4 5
+
+ - to find contraction coefficients from am molden file `Molecule.molden`, where the molecular orbitals 0,1,2 are used to find contraction coefficients for the basis functions 4,5 without renormalisation
+ 
+    hchem bascont [0,1,2] [4,5] False Molecule.molden

@@ -7,6 +7,8 @@ import Data.Attoparsec.Text
 import qualified Data.Text.IO as TIO
 import qualified Data.Chemistry.XYZ as XYZ
 import qualified Data.Chemistry.BasisSet as BasisSet
+import qualified Data.Chemistry.Molden as Molden
+import qualified Data.Chemistry.BasisOptimisation as BasisOptimisation
 
 -- find out what user wants to do and print info text if no or non valid choice
 -- calling all other subroutines
@@ -21,6 +23,7 @@ main = do
                  "align-many" -> align_many
                  "interpolate" -> interpolate
                  "basconv" -> basconv
+                 "bascont" -> bascont
                  _ -> hchem_help
          
 -- align a input structure at given atoms
@@ -130,9 +133,45 @@ basconv = do
                                     BasisSet.printBagelBasisList stdout gmsbasis
                                 else do
                                     putStrLn "  not a valid GAMESS-US basis set file"
+                         _ -> basconv_help
                 _ -> basconv_help
 
 
+bascont :: IO()
+bascont = do
+    -- collect the options from the command line
+    opts <- getArgs
+    let setOfBFs = opts !! 1
+        setOfMOs = opts !! 2
+        renorm = opts !! 3
+        molden_path = opts !! 4
+        
+        maysetOfBFs = (readMaybe :: String -> Maybe [Int]) setOfBFs
+        maysetOfMOs = (readMaybe :: String -> Maybe [Int]) setOfMOs
+        mayRenorm = (readMaybe :: String -> Maybe Bool) renorm
+    
+    -- check if input is complete
+    if (length opts /= 5 || isNothing maysetOfBFs == True || isNothing maysetOfMOs == True || isNothing mayRenorm == True)
+       then do
+           bascont_help
+       else do
+           -- read the content of the molden file
+           molden_file <- TIO.readFile molden_path
+           
+           -- try to parse the molden file
+           let moldenparse_try = parseOnly Molden.moldenParser molden_file
+               issetOfBFs = fromJust maysetOfBFs
+               issetOfMOs = fromJust maysetOfMOs
+               isrenorm = fromJust mayRenorm
+           -- if it works, give the output
+           if (isRight moldenparse_try)
+              then do
+                  let molden = fromRight moldenparse_try
+                  BasisOptimisation.getContrCoeff_print stdout issetOfBFs issetOfMOs isrenorm molden
+              else do
+                  putStrLn "  not a valid Molden file"
+
+    
 hchem_help :: IO()
 hchem_help = do
     putStrLn "HChem version 0.1"
@@ -143,6 +182,7 @@ hchem_help = do
     putStrLn "      align-many   -- align a trajectory, each frame in specific orientation"
     putStrLn "      interpolate  -- interpolate two structures in cartesian coordinates"
     putStrLn "      basconv      -- convert a basis set to a different format"
+    putStrLn "      bascont      -- recontraction and optimization of basis sets"
     
 
 align_help :: IO()
@@ -167,3 +207,11 @@ basconv_help = do
     putStrLn "    gamess"
     putStrLn "  $outformat can be"
     putStrLn "    bagel"
+
+bascont_help :: IO()
+bascont_help = do
+    putStrLn "  Usage hchem bascont $SetOfBasisFunctions $SetOfMolecularOrbitals $Renormalize $filename"
+    putStrLn "  $SetOfBasisFunctions is a Haskell style list of the basis functions"
+    putStrLn "  $SetOfMolecularOrbitals is a Haskell style list of molecular orbitals"
+    putStrLn "  $Renormalize is either True or False"
+    putStrLn "  $filename is the path to a molden file"
