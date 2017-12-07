@@ -1,6 +1,6 @@
 packages:
 - location: .
-- location: https://github.com/sheepforce/Haskell_Data.Chemistry/archive/a871dd2dea9ff053df6348f4b3c8aeef775c27c9.zip
+- location: https://github.com/sheepforce/Haskell_Data.Chemistry/archive/cb3634f33aac667bcbf85a2f3095c0f2cf8d0c60.zip
   extra-dep: true
 
 extra-deps:

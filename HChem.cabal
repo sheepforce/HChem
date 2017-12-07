@@ -1,24 +1,21 @@
-Name:		HChem
-Version:	0.2
-Cabal-Version:  >= 1.2
-License:	GPL-3
-License-File:	LICENSE
-Author:		Phillip Seeber
-Homepage:	https://github.com/sheepforce/HChem
-Category:	Chemistry
-Synopsis:	Handling chemical formats
-Build-Type:     Simple
+name: HChem
+version: 0.2
+cabal-version: >=1.2
+build-type: Simple
+license: GPL-3
+license-file: LICENSE
+homepage: https://github.com/sheepforce/HChem
+synopsis: Handling chemical formats
+category: Chemistry
+author: Phillip Seeber
 
-Executable hchem
-  Build-Depends:
-    base,
-    attoparsec,
-    HChem-libs,
-    text,
-    either-unwrap
-  Main-Is:
-    hchem.hs
-  hs-source-dirs:
-    src
-  ghc-options:
-    -Wall -O2
+executable hchem
+    main-is: hchem.hs
+    build-depends:
+        base -any,
+        attoparsec -any,
+        HChem-libs -any,
+        text -any,
+        either-unwrap -any
+    hs-source-dirs: src
+    ghc-options: -Wall -O2

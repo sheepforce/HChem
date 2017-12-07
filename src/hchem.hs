@@ -1,14 +1,14 @@
-import System.IO
-import System.Environment
-import Text.Read
-import Data.Maybe
-import Data.Either.Unwrap
-import Data.Attoparsec.Text
-import qualified Data.Text.IO as TIO
-import qualified Data.Chemistry.XYZ as XYZ
-import qualified Data.Chemistry.BasisSet as BasisSet
-import qualified Data.Chemistry.Molden as Molden
+import           Data.Attoparsec.Text
 import qualified Data.Chemistry.BasisOptimisation as BasisOptimisation
+import qualified Data.Chemistry.BasisSet          as BasisSet
+import qualified Data.Chemistry.Molden            as Molden
+import qualified Data.Chemistry.XYZ               as XYZ
+import           Data.Either.Unwrap
+import           Data.Maybe
+import qualified Data.Text.IO                     as TIO
+import           System.Environment
+import           System.IO
+import           Text.Read
 
 -- find out what user wants to do and print info text if no or non valid choice
 -- calling all other subroutines
@@ -19,13 +19,13 @@ main = do
     if (program == [])
        then hchem_help
        else case (head program) of
-                 "align" -> align
-                 "align-many" -> align_many
+                 "align"       -> align
+                 "align-many"  -> align_many
                  "interpolate" -> interpolate
-                 "basconv" -> basconv
-                 "bascont" -> bascont
-                 _ -> hchem_help
-         
+                 "basconv"     -> basconv
+                 "bascont"     -> bascont
+                 _             -> hchem_help
+
 -- align a input structure at given atoms
 align :: IO()
 align = do
@@ -145,11 +145,11 @@ bascont = do
         setOfMOs = opts !! 2
         renorm = opts !! 3
         molden_path = opts !! 4
-        
+
         maysetOfBFs = (readMaybe :: String -> Maybe [Int]) setOfBFs
         maysetOfMOs = (readMaybe :: String -> Maybe [Int]) setOfMOs
         mayRenorm = (readMaybe :: String -> Maybe Bool) renorm
-    
+
     -- check if input is complete
     if (length opts /= 5 || isNothing maysetOfBFs == True || isNothing maysetOfMOs == True || isNothing mayRenorm == True)
        then do
@@ -157,7 +157,7 @@ bascont = do
        else do
            -- read the content of the molden file
            molden_file <- TIO.readFile molden_path
-           
+
            -- try to parse the molden file
            let moldenparse_try = parseOnly Molden.moldenParser molden_file
                issetOfBFs = fromJust maysetOfBFs
@@ -171,7 +171,7 @@ bascont = do
               else do
                   putStrLn "  not a valid Molden file"
 
-    
+
 hchem_help :: IO()
 hchem_help = do
     putStrLn "HChem version 0.1"
@@ -183,7 +183,7 @@ hchem_help = do
     putStrLn "      interpolate  -- interpolate two structures in cartesian coordinates"
     putStrLn "      basconv      -- convert a basis set to a different format"
     putStrLn "      bascont      -- recontraction and optimization of basis sets"
-    
+
 
 align_help :: IO()
 align_help = do
@@ -193,7 +193,7 @@ align_help = do
 align_many_help :: IO()
 align_many_help = do
     putStrLn "  Usage: hchem align-many $filename $atom1 $atom2 $atom3"
-    putStrLn "  counting starts at 0"    
+    putStrLn "  counting starts at 0"
 
 interpolate_help :: IO()
 interpolate_help = do
