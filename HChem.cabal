@@ -1,5 +1,5 @@
 name: HChem
-version: 0.2
+version: 0.3
 cabal-version: >=1.2
 build-type: Simple
 license: GPL-3
@@ -14,7 +14,7 @@ executable hchem
     build-depends:
         base -any,
         attoparsec -any,
-        HChem-libs -any,
+        HChem-libs >= 0.3,
         text -any,
         either-unwrap -any
     hs-source-dirs: src

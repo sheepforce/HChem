@@ -1,9 +1,8 @@
 packages:
-- location: .
-- location: https://github.com/sheepforce/Haskell_Data.Chemistry/archive/cb3634f33aac667bcbf85a2f3095c0f2cf8d0c60.zip
-  extra-dep: true
+  - .
 
 extra-deps:
-- HChem-libs-0.2
+  - archive: https://github.com/sheepforce/Haskell_Data.Chemistry/archive/e94ce5b359ef3228467eda7ecb90f6b0e270a938.zip
 
-resolver: lts-9.14
+
+resolver: lts-9.21
