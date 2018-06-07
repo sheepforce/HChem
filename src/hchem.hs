@@ -192,12 +192,12 @@ momix = do
         Right m -> do
           let moldenNewMO = Molden.mixMMOs m (fromRight linCombList)
           putStr $ Writer.write_Molden moldenNewMO
-        Left m -> do
+        Left _ -> do
           putStrLn "Can not read your molden file"
 
 hchem_help :: IO()
 hchem_help = do
-  putStrLn "HChem version 0.1"
+  putStrLn "HChem version 0.3"
   putStrLn "  hchem [command] [options]"
   putStrLn ""
   putStrLn "  command can be"
