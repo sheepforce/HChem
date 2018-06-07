@@ -2,7 +2,7 @@ packages:
   - .
 
 extra-deps:
-  - archive: https://github.com/sheepforce/Haskell_Data.Chemistry/archive/e94ce5b359ef3228467eda7ecb90f6b0e270a938.zip
+  - archive: https://github.com/sheepforce/Haskell_Data.Chemistry/archive/v0.3.tar.gz
 
 
 resolver: lts-9.21
