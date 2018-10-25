@@ -236,7 +236,7 @@ hchem_help = do
   putStrLn "      basconv      -- convert a basis set to a different format"
   putStrLn "      bascont      -- recontraction and optimization of basis sets"
   putStrLn "      momix        -- arbitrary mixing of molecular orbitals from Molden files"
-  putStrLn "      trajFilter   -- filter frames of a trajectory for elements within a distance of a reference atom"
+  putStrLn "      trajfilter   -- filter frames of a trajectory for elements within a distance of a reference atom"
 
 
 align_help :: IO()
