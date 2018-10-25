@@ -29,6 +29,7 @@ main = do
       "basconv"     -> basconv
       "bascont"     -> bascont
       "momix"       -> momix
+      "trajfilter"  -> trajfilter
       _             -> hchem_help
 
 -- align a input structure at given atoms
@@ -195,6 +196,34 @@ momix = do
         Left _ -> do
           putStrLn "Can not read your molden file"
 
+trajfilter :: IO()
+trajfilter = do
+  opts <- getArgs
+  let mayberefAtomNumber = (readMaybe :: String -> Maybe Int) $ opts !! 2
+      types = opts !! 3
+      maybedistance = (readMaybe :: String -> Maybe Double) $ opts !! 4
+      trajFile = opts !! 1
+
+  if (length opts /= 5 || isNothing mayberefAtomNumber || isNothing maybedistance)
+    then do
+      trajfilter_help
+    else do
+      traj_raw <- T.readFile trajFile
+      let traj = parseOnly Parser.xyzTrajParser traj_raw
+      case traj of
+        Right t -> do
+          let filteredTraj = map (XYZ.findNeighboursOfType_Distance
+                (fromJust mayberefAtomNumber) types (fromJust maybedistance)) t
+              emptyXYZ = Types.XYZ
+                { XYZ._xyz_nAtoms = 0
+                , XYZ._xyz_comment = "Empty frame, either due to no present neighbours or wrong index of reference atom"
+                , XYZ._xyz_xyzcontent = []
+                }
+          putStr $ concat . map Writer.write_XYZ . map (fromMaybe emptyXYZ) $ filteredTraj
+        Left _ -> do
+          putStrLn "Could not read your trajectory"
+
+
 hchem_help :: IO()
 hchem_help = do
   putStrLn "HChem version 0.3"
@@ -207,6 +236,7 @@ hchem_help = do
   putStrLn "      basconv      -- convert a basis set to a different format"
   putStrLn "      bascont      -- recontraction and optimization of basis sets"
   putStrLn "      momix        -- arbitrary mixing of molecular orbitals from Molden files"
+  putStrLn "      trajFilter   -- filter frames of a trajectory for elements within a distance of a reference atom"
 
 
 align_help :: IO()
@@ -246,6 +276,14 @@ momix_help = do
   putStrLn "  $MoldenFile is the path to a proper molden file (if in doubt use Janpas molden2molden)"
   putStrLn "  $WeightOrbList is a list of weights and orbital indices in the style of"
   putStrLn "    weight|orbital -> \"1.0|10 1.0|11\" would mix the orbitals 10 and 11 50% each"
+
+trajfilter_help :: IO()
+trajfilter_help = do
+  putStrLn "  Usage hchem trajfilter $TrajectoryFile $RefAtomNumber $ElementToFind $MaximumDistance "
+  putStrLn "  $TrajectoryFile is a XYZ trajectory file"
+  putStrLn "  $RefAtomNumber is the index of the atom to which the distance is calculated"
+  putStrLn "  $ElementToFind is the element symbol, that shall be filtered out (X for CP2K Wannier centres)"
+  putStrLn "  $MaximumDistance is the maximal distance in angstrom"
 
 
 --------------------------------------------------------------------------------
