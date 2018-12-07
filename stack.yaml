@@ -2,8 +2,8 @@ packages:
   - .
 
 extra-deps:
-  #- archive: https://github.com/sheepforce/Haskell_Data.Chemistry/archive/v0.3.tar.gz
-  - archive: https://github.com/sheepforce/Haskell_Data.Chemistry/archive/master.zip
+  - archive: https://github.com/sheepforce/Haskell_Data.Chemistry/archive/cd53a54a446d68c7b7ae0286acb1ddf21f4c23f1.zip
+  #- archive: https://github.com/sheepforce/Haskell_Data.Chemistry/archive/master.zip
 
 
 resolver: lts-9.21

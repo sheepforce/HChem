@@ -2,16 +2,19 @@ import           Data.Attoparsec.Text.Lazy
 import qualified Data.Chemistry.BasisOptimisation as BasisOptimisation
 import qualified Data.Chemistry.Molden            as Molden
 import qualified Data.Chemistry.Parser            as Parser
+import qualified Data.Chemistry.Spectrum          as Spectrum
 import qualified Data.Chemistry.Types             as Types
 import qualified Data.Chemistry.Wavefunction      as Wavefunction
 import qualified Data.Chemistry.Writer            as Writer
 import qualified Data.Chemistry.XYZ               as XYZ
 import           Data.Either.Unwrap
 import           Data.Maybe
+import qualified Data.Text                        as T
 import qualified Data.Text.IO                     as T
-import qualified Data.Text as T
+import           Numeric.LinearAlgebra            hiding (double)
 import           System.Environment
 import           System.IO
+import           Text.Printf
 import           Text.Read
 
 -- find out what user wants to do and print info text if no or non valid choice
@@ -30,6 +33,7 @@ main = do
       "bascont"     -> bascont
       "momix"       -> momix
       "trajfilter"  -> trajfilter
+      "spectrify"   -> spectrify
       _             -> hchem_help
 
 -- align a input structure at given atoms
@@ -223,6 +227,119 @@ trajfilter = do
         Left _ -> do
           putStrLn "Could not read your trajectory"
 
+----------------------------------------------------------------------------------------------------
+spectrify :: IO()
+spectrify = do
+  opts <- getArgs
+  let optsLength = length opts
+      file = opts !! 1
+      fwhm = (readMaybe :: String -> Maybe Double) $ opts !! 2
+      eMin = (readMaybe :: String -> Maybe Double) $ opts !! 3
+      eMax = (readMaybe :: String -> Maybe Double) $ opts !! 4
+      eSpacing = (readMaybe :: String -> Maybe Double) $ opts !! 5
+      sFilterMode = opts !! 6
+      sFilterVal = (readMaybe :: String -> Maybe Double) $ opts !! 7
+      sFilterTresh = (readMaybe :: String -> Maybe Double) $ opts !! 8
+
+  if (not $ optsLength `elem` [6, 9])
+    then spectrify_help
+    else do
+      peaks_raw <- T.readFile file
+      let peaksParse = parseOnly (Parser.numericalMatrixParser "#%")peaks_raw
+          peaksHaveS2 = -- can do unwrapping here, if this is not used in other functions, if validPeaks == False
+            if (length . toColumns . fromJust . fromRight $ peaksParse) >= 3
+              then True
+              else False
+      validPeaks <- spectrify_CheckPeakMatrix peaksParse
+      let peaksUnwrapped = fromJust . fromRight $ peaksParse
+          fwhm' = fromJust fwhm
+          eMin' = fromJust eMin
+          eMax' = fromJust eMax
+          eSpacing' = fromJust eSpacing
+          grid = [ eMin', eMin' + eSpacing' .. eMax' ]
+      case optsLength of
+        6 -> do
+          if ( all isJust [fwhm, eMin, eMax, eSpacing] &&
+               validPeaks
+             )
+            then do
+              let peaks = (\(e:f:_) -> zip e f) . map toList . toColumns $ peaksUnwrapped
+                  bands_eV_fOsc = Spectrum.convolutionSum (Spectrum.gauss fwhm') peaks grid
+                  bands_eV_ε = map (\(e, f) -> (e, Spectrum.oscStrength2Epsilon fwhm' f)) bands_eV_fOsc
+                  bands_λ_fOsc = map (\(e, f) -> (Spectrum.eV2nm e, f)) bands_eV_fOsc
+                  bands_λ_ε = map (\(e, f) -> (Spectrum.eV2nm e, Spectrum.oscStrength2Epsilon fwhm' f)) bands_eV_fOsc
+                  output = spectrify_WriteResult (bands_eV_fOsc, bands_eV_ε, bands_λ_fOsc, bands_λ_ε)
+              putStrLn output
+            else spectrify_help
+        9 ->
+          if ( all isJust [fwhm, eMin, eMax, eSpacing, sFilterVal, sFilterTresh] &&
+               sFilterMode `elem` ["HC", "T"] &&
+               validPeaks &&
+               ((fst . size $ peaksUnwrapped) >= 3)
+             )
+            then do
+              let sFilterVal' = fromJust sFilterVal
+                  sFilterTresh' = fromJust sFilterTresh
+                  peaksAll = (\(e:f:s2:_) -> zip3 e f s2) . map toList . toColumns $ peaksUnwrapped
+                  peaks = map (\(e, f, _) -> (e, f)) $ case sFilterMode of -- somewhere here
+                    "HC" -> filter (\(_, _, s2) ->
+                      Wavefunction.spinContaminationFractionOfHigherState sFilterVal' s2 <= sFilterTresh'
+                      ) peaksAll
+                    "T" -> filter (\(_, _, s2) ->
+                      s2 >= sFilterVal' - sFilterTresh' &&
+                      s2 <= sFilterVal' + sFilterTresh'
+                      ) peaksAll
+                  bands_eV_fOsc = Spectrum.convolutionSum (Spectrum.gauss fwhm') peaks grid
+                  bands_eV_ε = map (\(e, f) -> (e, Spectrum.oscStrength2Epsilon fwhm' f)) bands_eV_fOsc
+                  bands_λ_fOsc = map (\(e, f) -> (Spectrum.eV2nm e, f)) bands_eV_fOsc
+                  bands_λ_ε = map (\(e, f) -> (Spectrum.eV2nm e, Spectrum.oscStrength2Epsilon fwhm' f)) bands_eV_fOsc
+                  output = spectrify_WriteResult (bands_eV_fOsc, bands_eV_ε, bands_λ_fOsc, bands_λ_ε)
+              putStrLn output
+            else spectrify_help
+
+spectrify_CheckPeakMatrix :: Either String (Maybe (Matrix Double)) -> IO Bool
+spectrify_CheckPeakMatrix pe =
+  case pe of
+    Right pm ->
+      case pm of
+        Just p -> return True
+        Nothing -> do
+          putStrLn "Peak input does not contain equal number of columns in every row"
+          return False
+    Left _ -> do
+      putStrLn "Could not parse peak input file"
+      return False
+
+spectrify_WriteResult ::
+  ( [(Double, Double)]
+  , [(Double, Double)]
+  , [(Double, Double)]
+  , [(Double, Double)]
+  ) ->
+  String
+spectrify_WriteResult (bands_eV_fOsc, bands_eV_ε, bands_λ_fOsc, bands_λ_ε) =
+  ( printf
+     ((concat . replicate 6 $ "# %17s ") ++ "\n")
+     "E / eV" "fOsc" "ε / l/(mol cm)" "λ / nm" "fOsc" "ε / l/(mol cm)"
+  ) ++
+  (concat . map writeLine $ tupledLines)
+  where
+    writeLine
+      ( (x1, y1)
+      , (x2, y2)
+      , (x3, y3)
+      , (x4, y4)
+      ) =
+        printf ((concat . replicate 6 $ "%19.5E ") ++ "\n") x1 y1 y2 x3 y3 y4
+    tupleLines :: ([a], [a], [a], [a]) -> [(a, a, a, a)]
+    tupleLines (a, b, c, d) =
+      [ (a !! i, b !! i, c !! i, d !! i)
+      | i <- indRange
+      ]
+      where
+        indRange = [0 .. length a - 1]
+    tupledLines = tupleLines (bands_eV_fOsc, bands_eV_ε, bands_λ_fOsc, bands_λ_ε)
+---------------------------------------------------------------------------------------------------
 
 hchem_help :: IO()
 hchem_help = do
@@ -237,6 +354,7 @@ hchem_help = do
   putStrLn "      bascont      -- recontraction and optimization of basis sets"
   putStrLn "      momix        -- arbitrary mixing of molecular orbitals from Molden files"
   putStrLn "      trajfilter   -- filter frames of a trajectory for elements within a distance of a reference atom"
+  putStrLn "      spectrify    -- broaden a stick spectrum with gaussian functions"
 
 
 align_help :: IO()
@@ -284,6 +402,22 @@ trajfilter_help = do
   putStrLn "  $RefAtomNumber is the index of the atom to which the distance is calculated"
   putStrLn "  $ElementToFind is the element symbol, that shall be filtered out (X for CP2K Wannier centres)"
   putStrLn "  $MaximumDistance is the maximal distance in angstrom"
+
+spectrify_help :: IO()
+spectrify_help = do
+  putStrLn "  Usage hchem spectrify $PeakFile $FWHM $Emin $Emax $Espacing [$FilterMode $SFilterValue $SFilterTresh]"
+  putStrLn "  $PeakFile is a file containing peak positions in eV, oscillator strengths and"
+  putStrLn "    optionally <S**2> values in a 2 or 3 column text file"
+  putStrLn "  $FWHM is the full width at half maximum of the peaks to be generated (Gaussian)"
+  putStrLn "  $Emin minimum value in eV of the broadening function to output"
+  putStrLn "  $Emax maximum value in eV of the broadening function to output"
+  putStrLn "  $Espacing is the distance between grid points in energy on which values are evaluated"
+  putStrLn "  $FilterMode is an optional argument if excited states should be filtered by their <S**2>"
+  putStrLn "    values. Can be \"HC\" to filter for the fraction the next higher spin state is allowed"
+  putStrLn "    to mix to this state or \"T\" to allow a treshold deviation from the pure value"
+  putStrLn "  $SFilterValue needs to be given if $FilterMode is set. This is the <S**2> value of the"
+  putStrLn "    desired pure spin state."
+  putStrLn "  $SFilterTresh needs to be given if $FilterMode is set. Exact meaning depends on $FilterMode"
 
 
 --------------------------------------------------------------------------------

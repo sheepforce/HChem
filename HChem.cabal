@@ -14,8 +14,9 @@ executable hchem
     build-depends:
         base -any,
         attoparsec -any,
-        HChem-libs >= 0.3,
+        HChem-libs >= 0.4,
         text -any,
-        either-unwrap -any
+        either-unwrap -any,
+        hmatrix >=0.18
     hs-source-dirs: src
     ghc-options: -Wall -O2
